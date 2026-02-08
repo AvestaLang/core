@@ -14,6 +14,7 @@ func Compile(input string) string {
 	result.WriteString("</head><body>")
 
 	lines := strings.Split(input, "\n")
+	stack := []string{}
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -34,6 +35,7 @@ func Compile(input string) string {
 			}
 
 			result.WriteString("<" + translated + ">")
+			stack = append(stack, translated)
 		}
 
 		if strings.Contains(trimmed, "=") && strings.Contains(trimmed, "«") && strings.Contains(trimmed, "»") {
@@ -41,7 +43,8 @@ func Compile(input string) string {
 		}
 
 		if trimmed == "پایان" {
-			println("End Finded")
+			result.WriteString("</" + stack[len(stack)-1] + ">")
+			stack = stack[:len(stack)-1]
 		}
 	}
 
