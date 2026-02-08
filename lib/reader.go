@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func reader(address string) (string, error) {
+func Reader(address string) (string, error) {
 	file, err := os.Open(address)
 
 	if err != nil {
