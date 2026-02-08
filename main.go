@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/avestalang/core/compiler"
 	"github.com/avestalang/core/lib"
 )
 
@@ -16,5 +17,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(content)
+	result := compiler.Compile(content)
+
+	fmt.Println(result)
 }
