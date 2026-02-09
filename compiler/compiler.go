@@ -1,66 +1,226 @@
 package compiler
 
 import (
-	"errors"
+	"fmt"
+	"html"
 	"strings"
 )
 
-func Compile(input string) string {
-	result := strings.Builder{}
+//
+// =======================
+// AST
+// =======================
+//
 
-	result.WriteString("<!DOCTYPE html>")
-	result.WriteString("<html lang=\"fa\"><head>")
-	result.WriteString("<meta charset=\"utf-8\">")
-	result.WriteString("</head><body>")
+type Node struct {
+	Tag        string
+	Attributes map[string]string
+	Children   []*Node
+	Text       string
+}
 
+//
+// =======================
+// TOKENS
+// =======================
+//
+
+type TokenType int
+
+const (
+	TokenTag TokenType = iota
+	TokenEnd
+	TokenAttr
+)
+
+type Token struct {
+	Type  TokenType
+	Key   string
+	Value string
+}
+
+//
+// =======================
+// TRANSLATION
+// =======================
+//
+
+var tagMap = map[string]string{
+	"جعبه": "div",
+	"دکمه": "button",
+}
+
+//
+// =======================
+// LEXER
+// =======================
+//
+
+func lex(input string) ([]Token, error) {
 	lines := strings.Split(input, "\n")
-	stack := []string{}
+	var tokens []Token
 
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
+	for i, line := range lines {
 
-		if trimmed == "" {
+		t := strings.TrimSpace(line)
+		if t == "" {
 			continue
 		}
 
-		if strings.HasSuffix(trimmed, ":") {
-			translated, err := translate(strings.Trim(trimmed, ":"))
+		switch {
 
-			if translated == "" {
-				continue
+		case strings.HasSuffix(t, ":"):
+			name := strings.TrimSuffix(t, ":")
+			tokens = append(tokens, Token{
+				Type:  TokenTag,
+				Key:   name,
+				Value: "",
+			})
+
+		case t == "پایان":
+			tokens = append(tokens, Token{
+				Type: TokenEnd,
+			})
+
+		case strings.Contains(t, "="):
+			parts := strings.SplitN(t, "=", 2)
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("invalid attribute at line %d", i+1)
 			}
 
-			if err != nil {
-				panic(err)
+			val := strings.Trim(parts[1], "«»")
+
+			tokens = append(tokens, Token{
+				Type:  TokenAttr,
+				Key:   parts[0],
+				Value: val,
+			})
+		}
+	}
+
+	return tokens, nil
+}
+
+//
+// =======================
+// PARSER → AST
+// =======================
+//
+
+func parse(tokens []Token) (*Node, error) {
+
+	root := &Node{
+		Tag:        "root",
+		Attributes: map[string]string{},
+	}
+
+	stack := []*Node{root}
+
+	for _, tok := range tokens {
+
+		switch tok.Type {
+
+		case TokenTag:
+
+			htmlTag, ok := tagMap[tok.Key]
+			if !ok {
+				return nil, fmt.Errorf("unknown tag %s", tok.Key)
 			}
 
-			result.WriteString("<" + translated + ">")
-			stack = append(stack, translated)
-		}
+			node := &Node{
+				Tag:        htmlTag,
+				Attributes: map[string]string{},
+			}
 
-		if strings.Contains(trimmed, "=") && strings.Contains(trimmed, "«") && strings.Contains(trimmed, "»") {
-			println("Property Finded")
-		}
+			parent := stack[len(stack)-1]
+			parent.Children = append(parent.Children, node)
 
-		if trimmed == "پایان" {
-			result.WriteString("</" + stack[len(stack)-1] + ">")
+			stack = append(stack, node)
+
+		case TokenAttr:
+
+			parent := stack[len(stack)-1]
+
+			if tok.Key == "محتوا" {
+				parent.Text = tok.Value
+			} else {
+				parent.Attributes[tok.Key] = tok.Value
+			}
+
+		case TokenEnd:
+
+			if len(stack) == 1 {
+				return nil, fmt.Errorf("unexpected پایان")
+			}
+
 			stack = stack[:len(stack)-1]
 		}
 	}
 
-	result.WriteString("</body></html>")
-	return result.String()
+	if len(stack) != 1 {
+		return nil, fmt.Errorf("unclosed tags detected")
+	}
+
+	return root, nil
 }
 
-func translate(tag string) (string, error) {
-	tags := map[string]string{
-		"دکمه": "button",
-		"جعبه": "div",
+//
+// =======================
+// RENDERER
+// =======================
+//
+
+func render(n *Node, b *strings.Builder) {
+
+	if n.Tag != "root" {
+
+		b.WriteString("<" + n.Tag)
+
+		for k, v := range n.Attributes {
+			b.WriteString(fmt.Sprintf(` %s="%s"`, k, html.EscapeString(v)))
+		}
+
+		b.WriteString(">")
 	}
 
-	if hTag, exists := tags[tag]; exists {
-		return hTag, nil
+	if n.Text != "" {
+		b.WriteString(html.EscapeString(n.Text))
 	}
 
-	return "", errors.New("Cant find translate of => " + tag)
+	for _, c := range n.Children {
+		render(c, b)
+	}
+
+	if n.Tag != "root" {
+		b.WriteString("</" + n.Tag + ">")
+	}
+}
+
+//
+// =======================
+// PUBLIC COMPILER
+// =======================
+//
+
+func Compile(input string) (string, error) {
+
+	tokens, err := lex(input)
+	if err != nil {
+		return "", err
+	}
+
+	ast, err := parse(tokens)
+	if err != nil {
+		return "", err
+	}
+
+	var b strings.Builder
+
+	b.WriteString(`<!DOCTYPE html><html lang="fa"><head><meta charset="utf-8"></head><body>`)
+
+	render(ast, &b)
+
+	b.WriteString("</body></html>")
+
+	return b.String(), nil
 }

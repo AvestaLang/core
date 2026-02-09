@@ -17,7 +17,7 @@ func main() {
 		panic(err)
 	}
 
-	result := compiler.Compile(content)
+	result, _ := compiler.Compile(content)
 
 	fmt.Println(result)
 }
