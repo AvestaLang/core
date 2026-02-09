@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"html"
 	"strings"
+
+	"github.com/avestalang/core/lib"
 )
 
 //
@@ -198,6 +200,28 @@ func render(n *Node, b *strings.Builder) {
 
 //
 // =======================
+// RENDERER
+// =======================
+//
+
+var styles = []string{
+	"button.css",
+}
+
+func Styles() string {
+	all := ""
+
+	for _, file := range styles {
+		content, _ := lib.Reader("./styles/" + file)
+
+		all += content + "\n"
+	}
+
+	return all
+}
+
+//
+// =======================
 // PUBLIC COMPILER
 // =======================
 //
@@ -216,7 +240,12 @@ func Compile(input string) (string, error) {
 
 	var b strings.Builder
 
-	b.WriteString(`<!DOCTYPE html><html lang="fa"><head><meta charset="utf-8"></head><body>`)
+	b.WriteString(`<!DOCTYPE html><html dir="rtl" lang="fa"><head><meta charset="utf-8"><style>`)
+
+	styles := Styles()
+	b.WriteString(styles)
+
+	b.WriteString(`</style></head><body>`)
 
 	render(ast, &b)
 
