@@ -14,7 +14,7 @@ func main() {
 	content, err := lib.Reader(inputAddress)
 
 	if err != nil {
-		panic(err)
+		content = os.Args[1]
 	}
 
 	result, _ := compiler.Compile(content)
