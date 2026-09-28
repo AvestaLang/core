@@ -9,10 +9,10 @@ public sealed class Lexer
 
     public Lexer(string source)
     {
-        _source = source;
+        _source = NormalizeSpaces(source);
     }
 
-    public IReadOnlyList<Token> Tokenize()
+    public List<Token> Tokenize()
     {
         var tokens = new List<Token>();
 
@@ -41,7 +41,7 @@ public sealed class Lexer
                     tokens.Add(new(TokenType.Colon, ":", line, column));
                     break;
 
-                case '"':
+                case '«':
                     tokens.Add(ReadString(line, column));
                     break;
 
@@ -59,7 +59,7 @@ public sealed class Lexer
                     }
 
                     throw new Exception(
-                        $"Unexpected character '{current}' at {line}:{column}"
+                        $"Unexpected character '{current}' -> code: {(int)current} at {line}:{column}"
                     );
             }
         }
@@ -78,7 +78,7 @@ public sealed class Lexer
     {
         var value = string.Empty;
 
-        while (!IsAtEnd() && Peek() != '"')
+        while (!IsAtEnd() && Peek() != '»')
             value += Advance();
 
         if (IsAtEnd())
@@ -142,5 +142,13 @@ public sealed class Lexer
     private bool IsAtEnd()
     {
         return _position >= _source.Length;
+    }
+
+    public string NormalizeSpaces(string value)
+    {
+        return value
+            .Replace('\u200C', ' ')
+            .Replace('\u200E', ' ')
+            .Replace('\u200F', ' ');
     }
 }
