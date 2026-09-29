@@ -3,11 +3,13 @@
 public enum TokenType
 {
     Identifier,
+
     String,
     Number,
 
-    OpenBrace,
-    CloseBrace,
+    OpenBracket,
+    CloseBracket,
+
     Colon,
 
     EndOfFile

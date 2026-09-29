@@ -1,123 +1,133 @@
-﻿namespace Core.Lexer;
+﻿using System.Collections.Generic;
+using System.Data.Common;
+using System.Diagnostics;
 
-public sealed class Lexer
+namespace Core.Lexer;
+
+public static class Lexer
 {
-    private readonly string _source;
-    private int _position;
-    private int _line = 1;
-    private int _column = 1;
+    private static string _source;
 
-    public Lexer(string source)
+    private static int 
+        _position = 0,
+        _line = 1,
+        _column = 1;
+
+
+    public static List<Token> Tokenize(string source)
     {
-        _source = NormalizeSpaces(source);
-    }
+        List<Token> tokens = new List<Token>();
+        _source = source;
 
-    public List<Token> Tokenize()
-    {
-        var tokens = new List<Token>();
-
-        while (!IsAtEnd())
+        while(_position <= _source.Length - 1)
         {
-            SkipWhitespace();
+            char character = Peek();
 
-            if (IsAtEnd())
-                break;
-
-            var line = _line;
-            var column = _column;
-            var current = Advance();
-
-            switch (current)
+            if (character == ' ')
             {
-                case '{':
-                    tokens.Add(new(TokenType.OpenBrace, "{", line, column));
-                    break;
+                continue;
+            }
 
-                case '}':
-                    tokens.Add(new(TokenType.CloseBrace, "}", line, column));
-                    break;
-
-                case ':':
-                    tokens.Add(new(TokenType.Colon, ":", line, column));
-                    break;
-
+            switch(character)
+            {
                 case '«':
-                    tokens.Add(ReadString(line, column));
+                    tokens.Add(ReadString());
                     break;
-
+                case '{':
+                    tokens.Add(new Token(
+                        type: TokenType.OpenBracket,
+                        value: character.ToString(),
+                        line: _line,
+                        column: _column
+                    ));
+                    break;
+                case '}':
+                    tokens.Add(new Token(
+                        type: TokenType.CloseBracket,
+                        value: character.ToString(),
+                        line: _line,
+                        column: _column
+                    ));
+                    break;
+                case ':':
+                    tokens.Add(new Token(
+                        type: TokenType.Colon,
+                        value: character.ToString(),
+                        line: _line,
+                        column: _column
+                    ));
+                    break;
+                
                 default:
-                    if (char.IsDigit(current))
+                    if (char.IsDigit(character))
                     {
-                        tokens.Add(ReadNumber(current, line, column));
+                        tokens.Add(ReadNumber(character));
                         break;
                     }
 
-                    if (char.IsLetter(current))
+                    if (char.IsLetter(character))
                     {
-                        tokens.Add(ReadIdentifier(current, line, column));
+                        tokens.Add(ReadIdentifier(character));
                         break;
                     }
 
-                    throw new Exception(
-                        $"Unexpected character '{current}' -> code: {(int)current} at {line}:{column}"
-                    );
+                    break;
             }
         }
-
-        tokens.Add(new(
-            TokenType.EndOfFile,
-            string.Empty,
-            _line,
-            _column
-        ));
 
         return tokens;
     }
 
-    private Token ReadString(int line, int column)
+    private static Token ReadString()
     {
-        var value = string.Empty;
+        string text = string.Empty;
 
-        while (!IsAtEnd() && Peek() != '»')
-            value += Advance();
+        while (_source[_position] != '»') {
+            text += Peek();
+        }
 
-        if (IsAtEnd())
-            throw new Exception(
-                $"Unterminated string at {line}:{column}"
-            );
 
-        Advance();
-
-        return new(TokenType.String, value, line, column);
+        return new Token(
+            type: TokenType.String,
+            value: text,
+            line: _line,
+            column: _column
+        );
     }
 
-    private Token ReadNumber(char first, int line, int column)
+    private static Token ReadNumber(char first)
     {
-        var value = first.ToString();
+        string text = first.ToString();
 
-        while (!IsAtEnd() && char.IsDigit(Peek()))
-            value += Advance();
+        while (char.IsDigit(_source[_position]))
+            text += Peek();
 
-        return new(TokenType.Number, value, line, column);
+        return new Token(
+            type: TokenType.Number,
+            value: text,
+            line: _line,
+            column: _column
+        );
     }
 
-    private Token ReadIdentifier(char first, int line, int column)
+    private static Token ReadIdentifier(char first)
     {
-        var value = first.ToString();
+        string text = first.ToString();
 
-        while (!IsAtEnd() && (char.IsLetterOrDigit(Peek()) || Peek() == '_'))
-            value += Advance();
+        char character = _source[_position];
 
-        return new(TokenType.Identifier, value, line, column);
+        while ((char.IsLetterOrDigit(_source[_position]) || _source[_position] == '_'))
+            text += Peek();
+
+        return new Token(
+            type: TokenType.Identifier,
+            value: text,
+            line: _line,
+            column: _column
+        );
     }
 
-    private void SkipWhitespace()
-    {
-        while (!IsAtEnd() && char.IsWhiteSpace(Peek()))
-            Advance();
-    }
-
-    private char Advance()
+    private static char Peek()
     {
         var character = _source[_position++];
 
@@ -132,23 +142,5 @@ public sealed class Lexer
         }
 
         return character;
-    }
-
-    private char Peek()
-    {
-        return IsAtEnd() ? '\0' : _source[_position];
-    }
-
-    private bool IsAtEnd()
-    {
-        return _position >= _source.Length;
-    }
-
-    public string NormalizeSpaces(string value)
-    {
-        return value
-            .Replace('\u200C', ' ')
-            .Replace('\u200E', ' ')
-            .Replace('\u200F', ' ');
     }
 }

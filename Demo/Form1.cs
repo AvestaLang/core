@@ -1,5 +1,4 @@
 ﻿using Core.Lexer;
-using Core.Parser;
 
 namespace Demo
 {
@@ -25,13 +24,7 @@ namespace Demo
             }
             """;
 
-            var lexer = new Lexer(source);
-
-            var tokens = lexer.Tokenize();
-
-            var parser = new Parser(tokens);
-
-            var ast = parser.Parse();
+            var lexer = Lexer.Tokenize(source);
         }
     }
 }
