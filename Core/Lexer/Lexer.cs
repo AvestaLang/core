@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Data.Common;
-using System.Diagnostics;
-
-namespace Core.Lexer;
+﻿namespace Core.Lexer;
 
 public static class Lexer
 {
