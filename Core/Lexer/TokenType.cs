@@ -13,6 +13,7 @@ public enum TokenType
 
     String,
     Number,
+    Boolean,
 
     OpenBracket,
     CloseBracket,

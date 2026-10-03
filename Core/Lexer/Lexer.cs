@@ -1,23 +1,29 @@
-﻿namespace Core.Lexer;
+﻿using Core.Ast.Values;
 
-public static class Lexer
+namespace Core.Lexer;
+
+public class Lexer
 {
-    private static string _source;
+    private string _source;
 
-    private static int 
+    public Lexer(string source)
+    {
+        _source = source;
+    }
+
+    private int 
         _position = 0,
         _line = 1,
         _column = 1;
 
 
-    public static List<Token> Tokenize(string source)
+    public List<Token> Tokenize()
     {
         List<Token> tokens = new List<Token>();
-        _source = source;
-
+        
         while(_position <= _source.Length - 1)
         {
-            char character = Peek();
+            char character = Advance();
 
             if (character == ' ')
             {
@@ -71,15 +77,22 @@ public static class Lexer
             }
         }
 
+        tokens.Add(new Token(
+            type: TokenType.EndOfFile,
+            value: "",
+            line: _line,
+            column: _column
+        ));
+
         return tokens;
     }
 
-    private static Token ReadString()
+    private Token ReadString()
     {
         string text = string.Empty;
 
         while (_source[_position] != '»') {
-            text += Peek();
+            text += Advance();
         }
 
 
@@ -91,12 +104,12 @@ public static class Lexer
         );
     }
 
-    private static Token ReadNumber(char first)
+    private Token ReadNumber(char first)
     {
         string text = first.ToString();
 
         while (char.IsDigit(_source[_position]))
-            text += Peek();
+            text += Advance();
 
         return new Token(
             type: TokenType.Number,
@@ -106,14 +119,24 @@ public static class Lexer
         );
     }
 
-    private static Token ReadIdentifier(char first)
+    private Token ReadIdentifier(char first)
     {
         string text = first.ToString();
 
         char character = _source[_position];
 
         while ((char.IsLetterOrDigit(_source[_position]) || _source[_position] == '_'))
-            text += Peek();
+            text += Advance();
+
+        if(text == "درست" || text == "نادرست")
+        {
+            return new Token(
+                type: TokenType.Boolean,
+                value: text,
+                line: _line,
+                column: _column
+            );
+        }
 
         return new Token(
             type: TokenType.Identifier,
@@ -123,7 +146,7 @@ public static class Lexer
         );
     }
 
-    private static char Peek()
+    private char Advance()
     {
         var character = _source[_position++];
 
